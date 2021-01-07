@@ -1,0 +1,15 @@
+[package]
+name = "cife-rs"
+version = "0.1.0"
+authors = ["Ruben De Smet <ruben.de.smet@rubdos.be>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+[dependencies.miracl_core]
+version = "2.3.0"
+features = [
+    "bn254"
+]

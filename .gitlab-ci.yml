@@ -1,0 +1,110 @@
+---
+stages:
+  - build
+  - test
+  - deploy
+
+.rust: &rust
+  cache: &rust-cache
+    paths:
+      - target/
+      - $CARGO_HOME/bin/
+      - $CARGO_HOME/registry/index/
+      - $CARGO_HOME/registry/cache/
+      - $CARGO_HOME/git/db/
+
+.rust-stable: &rust-stable
+  <<: *rust
+  image: rust
+  cache:
+    <<: *rust-cache
+    key: rust-stable
+
+.rust-nightly: &rust-nightly
+  <<: *rust
+  image: rustlang/rust:nightly
+  cache:
+    <<: *rust-cache
+    key: rust-nightly
+
+build:host:stable:
+  <<: *rust-stable
+  stage: build
+  needs: []
+  script:
+    - cargo build
+    - cargo build --release
+
+build:host:nightly:
+  <<: *rust-nightly
+  stage: build
+  needs: []
+  script:
+    - cargo build
+    - cargo build --release
+
+build:host:nightly:docs:
+  <<: *rust-nightly
+  stage: build
+  needs: []
+  script:
+    - cargo doc --no-deps -p ciphe-rs -p miracl_core --document-private-items
+  artifacts:
+    paths:
+      - target/doc
+
+test:stable:
+  <<: *rust-stable
+  stage: test
+  needs: []
+  script:
+    - cargo test
+    - cargo test --release
+
+test:nightly:
+  <<: *rust-nightly
+  stage: test
+  needs: []
+  script:
+    - cargo test
+    - cargo test --release
+
+fmt:nightly:
+  <<: *rust-nightly
+  stage: test
+  needs: []
+  script:
+    - cargo fmt -- --check
+
+coverage:nightly:
+  <<: *rust-nightly
+  image: xd009642/tarpaulin:develop-nightly
+  stage: test
+  needs: []
+  script:
+    - export PATH="$CARGO_HOME/bin:$PATH"
+    - cargo tarpaulin -v --exclude-files cargo/*
+
+clippy:
+  <<: *rust-nightly
+  stage: test
+  needs: []
+  allow_failure: true
+  script:
+    - rustup component add clippy
+    - cargo clippy
+
+pages:
+  dependencies:
+    - build:host:nightly:docs
+  needs:
+    - build:host:nightly:docs
+  stage: deploy
+  only:
+    - master
+  script:
+    - mkdir -p public
+    - mv target/doc public/
+  artifacts:
+    paths:
+      - public
