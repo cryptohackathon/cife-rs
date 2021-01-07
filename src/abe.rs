@@ -10,7 +10,7 @@
 //! 2018](https://eprint.iacr.org/2018/753).
 //!
 //! Currently, CiFE-rs, this Rust implementation, aims to fully implement the DIPPE scheme,
-//! and is madel available in the [`dippe`] module.
+//! and is made available in the [`dippe`] module.
 
 #[cfg(feature = "dippe")]
 pub mod dippe;
