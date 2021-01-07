@@ -13,3 +13,7 @@ version = "2.3.0"
 features = [
     "bn254"
 ]
+
+[features]
+default = ["dippe"]
+dippe = []
