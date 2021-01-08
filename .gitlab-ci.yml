@@ -48,7 +48,7 @@ build:host:nightly:docs:
   stage: build
   needs: []
   script:
-    - cargo doc --no-deps -p cife-rs -p miracl_core --document-private-items
+    - cargo doc --no-deps -p cife-rs -p rabe-bn --document-private-items
   artifacts:
     paths:
       - target/doc

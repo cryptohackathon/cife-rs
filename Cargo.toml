@@ -7,12 +7,10 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-
-[dependencies.miracl_core]
-version = "2.3.0"
-features = [
-    "bn254"
-]
+anyhow = "1.0"
+rand = "0.7"
+thiserror = "1.0"
+rabe-bn = "0.4"
 
 [features]
 default = ["dippe"]
