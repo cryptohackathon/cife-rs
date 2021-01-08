@@ -11,9 +11,13 @@ pub struct Matrix<T> {
     inner: Vec<T>,
 }
 
+#[allow(dead_code)]
 pub type G1Matrix = Matrix<G1>;
+#[allow(dead_code)]
 pub type G2Matrix = Matrix<G2>;
+#[allow(dead_code)]
 pub type GtMatrix = Matrix<Gt>;
+#[allow(dead_code)]
 pub type FrMatrix = Matrix<Fr>;
 
 impl<T> Matrix<T>
