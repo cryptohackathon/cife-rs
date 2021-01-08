@@ -23,8 +23,6 @@ where
     pub fn from_random<R: Rng>(rand: &mut R, n: usize, m: usize) -> Self {
         let mut inner = Vec::with_capacity(n * m);
 
-        let distribution = rand::distributions::Standard;
-
         for _ in 0..(n * m) {
             inner.push(rand.gen());
         }
