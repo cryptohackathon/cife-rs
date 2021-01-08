@@ -5,7 +5,7 @@ use rabe_bn::*;
 use rand::prelude::*;
 
 /// Dippe system parameters
-struct Dippe {
+pub struct Dippe {
     assumption_size: usize,
     g1_a: G1Matrix,
     g1_ua: G1Matrix,
