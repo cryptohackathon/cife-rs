@@ -4,7 +4,7 @@ use rabe_bn::*;
 use rand::prelude::*;
 
 /// Dynamically sized Matrix of a generic value.
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Clone)]
 pub struct Matrix<T> {
     n: usize,
     m: usize,
@@ -30,6 +30,97 @@ where
     }
 }
 
+impl<T> core::ops::Index<(usize, usize)> for Matrix<T> {
+    type Output = T;
+
+    fn index(&self, idx: (usize, usize)) -> &Self::Output {
+        &self.inner[idx.0 * self.m + idx.1]
+    }
+}
+
+macro_rules! mult_matrix {
+    ($scalar:ty, $group:ty) => {
+        /// Point-wise multiply a matrix with one element
+        impl core::ops::Mul<$group> for Matrix<$scalar> {
+            type Output = Matrix<$group>;
+
+            fn mul(self, rhs: $group) -> Self::Output {
+                // For some reason, rabe_bn expects group * field.
+                let inner = self.inner.into_iter().map(|x| rhs * x).collect();
+                Self::Output {
+                    n: self.n,
+                    m: self.m,
+                    inner,
+                }
+            }
+        }
+
+        /// Standard matrix multiplication
+        impl core::ops::Mul<Matrix<$group>> for Matrix<$scalar> {
+            type Output = Matrix<$group>;
+
+            fn mul(self, rhs: Matrix<$group>) -> Self::Output {
+                assert_eq!(self.m, rhs.n, "Addition with non-matching dimensions");
+                let mut inner = Vec::with_capacity(self.n * rhs.m);
+                println!("LHS: {:?} x RHS: {:?}", self, rhs);
+
+                // XXX should be doable by *move* instead of .clone().
+                // ij over target dimensions
+                for i in 0..self.n {
+                    for j in 0..rhs.m {
+                        let mut m_ij = <$group>::zero();
+                        for k in 0..self.m {
+                            // G * a = A, Mul implementation is slightly weird.
+                            m_ij = m_ij + rhs[(k, j)].clone() * self[(i, k)].clone();
+                        }
+                        inner.push(m_ij);
+                    }
+                }
+
+                Self::Output {
+                    n: self.n,
+                    m: rhs.m,
+                    inner,
+                }
+            }
+        }
+    };
+}
+
+mult_matrix!(Fr, G1);
+mult_matrix!(Fr, G2);
+mult_matrix!(Fr, Fr);
+
+macro_rules! add_matrix {
+    ($el:ty) => {
+        /// Point-wise multiply a matrix with one element
+        impl core::ops::Add for Matrix<$el> {
+            type Output = Self;
+
+            fn add(self, rhs: Self) -> Self {
+                assert_eq!(self.n, rhs.n, "Addition with non-matching dimensions");
+                assert_eq!(self.m, rhs.m, "Addition with non-matching dimensions");
+
+                let inner = self
+                    .inner
+                    .into_iter()
+                    .zip(rhs.inner.into_iter())
+                    .map(|(x, y)| x + y)
+                    .collect();
+                Self {
+                    n: self.n,
+                    m: self.m,
+                    inner,
+                }
+            }
+        }
+    };
+}
+
+add_matrix!(G1);
+add_matrix!(G2);
+add_matrix!(Fr);
+
 impl<T> core::fmt::Debug for Matrix<T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "Matrix<{}>{{ {} x {} }}", stringify!(T), self.n, self.m)
@@ -46,5 +137,39 @@ mod tests {
         let b = FrMatrix::from_random(&mut thread_rng(), 1, 1);
 
         assert_ne!(a, b, "Two random matrices are equal");
+    }
+
+    #[test]
+    fn simple_matrix_ops() {
+        // point-wise scalar matrix X group element
+        let mat = FrMatrix::from_random(&mut thread_rng(), 2, 2);
+        let _ = mat.clone() * G1::one();
+        let _ = mat.clone() * G2::one();
+
+        // (hadamard) addition of two matrices
+        let a = FrMatrix::from_random(&mut thread_rng(), 2, 2);
+        let b = FrMatrix::from_random(&mut thread_rng(), 2, 2);
+        let _ = a + b;
+
+        // Standard mat mul
+        let a = FrMatrix::from_random(&mut thread_rng(), 3, 3);
+        let b = FrMatrix::from_random(&mut thread_rng(), 3, 2);
+        let _ = a * b;
+    }
+
+    #[test]
+    #[should_panic]
+    fn non_matching_dims_add() {
+        let a = FrMatrix::from_random(&mut thread_rng(), 2, 1);
+        let b = FrMatrix::from_random(&mut thread_rng(), 2, 2);
+        let _ = a + b;
+    }
+
+    #[test]
+    #[should_panic]
+    fn non_matching_dims_mul() {
+        let a = FrMatrix::from_random(&mut thread_rng(), 2, 2);
+        let b = FrMatrix::from_random(&mut thread_rng(), 1, 2);
+        let _ = a * b;
     }
 }
