@@ -14,7 +14,7 @@ pub struct Matrix<T> {
 pub type G1Matrix = Matrix<G1>;
 pub type G2Matrix = Matrix<G2>;
 pub type GtMatrix = Matrix<Gt>;
-pub type FPMatrix = Matrix<Fr>;
+pub type FrMatrix = Matrix<Fr>;
 
 impl<T> Matrix<T>
 where
@@ -44,8 +44,8 @@ mod tests {
 
     #[test]
     fn generate_random_matrices() {
-        let a = FPMatrix::from_random(&mut thread_rng(), 1, 1);
-        let b = FPMatrix::from_random(&mut thread_rng(), 1, 1);
+        let a = FrMatrix::from_random(&mut thread_rng(), 1, 1);
+        let b = FrMatrix::from_random(&mut thread_rng(), 1, 1);
 
         assert_ne!(a, b, "Two random matrices are equal");
     }
