@@ -1,4 +1,4 @@
-# CiPE-rs - Functional encryption library
+# CiFE-rs - Functional encryption library
 
 CiFE-rs (prounounced as ciphers) is a cryptographic library offering different state-of-the-art implementations of functional encryption schemes,
 specifically FE schemes for *linear* polynomials (e.g. *inner products*).
