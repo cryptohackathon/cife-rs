@@ -11,12 +11,18 @@ pub struct Dippe {
     g1_ua: G1Matrix,
 }
 
+/// Public key of a DIPPE authority.
+///
+/// A key-pair is generated with [Dippe::generate_key_pair]
 pub struct PublicKey {
     g2_sigma: G2,
     g1_w_a: G1Matrix,
     gt_alpha_a: GtVector,
 }
 
+/// Private key of a DIPPE authority.
+///
+/// A key-pair is generated with [Dippe::generate_key_pair]
 pub struct PrivateKey {
     sigma: Fr,
     alpha: FrVector,
@@ -39,6 +45,7 @@ impl Dippe {
         }
     }
 
+    /// Generate the key-pair for a DIPPE authority
     pub fn generate_key_pair<R: CryptoRng + RngCore>(
         &self,
         rand: &mut R,
