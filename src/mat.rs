@@ -20,6 +20,16 @@ pub type GtMatrix = Matrix<Gt>;
 #[allow(dead_code)]
 pub type FrMatrix = Matrix<Fr>;
 
+// XXX: room for optimization for Vectors.
+#[allow(dead_code)]
+pub type G1Vector = Matrix<G1>;
+#[allow(dead_code)]
+pub type G2Vector = Matrix<G2>;
+#[allow(dead_code)]
+pub type GtVector = Matrix<Gt>;
+#[allow(dead_code)]
+pub type FrVector = Matrix<Fr>;
+
 impl<T> Matrix<T>
 where
     rand::distributions::Standard: rand::distributions::Distribution<T>,
@@ -31,6 +41,39 @@ where
             inner.push(rand.gen());
         }
         Self { n, m, inner }
+    }
+
+    pub fn transposed(&self) -> Self
+    where
+        T: Clone,
+    {
+        let mut inner = Vec::with_capacity(self.n * self.m);
+        for j in 0..self.m {
+            for i in 0..self.n {
+                inner.push(self[(i, j)].clone());
+            }
+        }
+        Self {
+            n: self.m,
+            m: self.n,
+            inner,
+        }
+    }
+}
+
+impl G1Matrix {
+    /// Pairs every element of the G1 matrix with the generator G2.
+    pub fn pair_with_g2(&self) -> GtMatrix {
+        let inner = self
+            .inner
+            .iter()
+            .map(|x| rabe_bn::pairing(x.clone(), G2::one()))
+            .collect();
+        GtMatrix {
+            n: self.n,
+            m: self.m,
+            inner,
+        }
     }
 }
 
@@ -93,6 +136,45 @@ macro_rules! mult_matrix {
 mult_matrix!(Fr, G1);
 mult_matrix!(Fr, G2);
 mult_matrix!(Fr, Fr);
+
+/// Standard matrix multiplication.
+///
+/// For
+/// A \in Gt_{i x k}
+/// B \in Fr_{k x j}
+///
+/// Computes C = A * B
+/// C_ij = \Pi_k B_kj ^ A_ki
+/// for the multiplicatively-written group Gt.
+///
+/// Equivalent of CiFEr's `cfe_mat_GT_mul_vec`
+impl core::ops::Mul<Matrix<Fr>> for Matrix<Gt> {
+    type Output = Matrix<Gt>;
+
+    fn mul(self, rhs: Matrix<Fr>) -> Self::Output {
+        assert_eq!(self.m, rhs.n, "Addition with non-matching dimensions");
+        let mut inner = Vec::with_capacity(self.n * rhs.m);
+
+        // XXX should be doable by *move* instead of .clone().
+        // ij over target dimensions
+        for i in 0..self.n {
+            for j in 0..rhs.m {
+                let mut m_ij = Gt::one();
+                for k in 0..self.m {
+                    // G * a = A, Mul implementation is slightly weird.
+                    m_ij = m_ij * self[(i, k)].clone().pow(rhs[(k, j)].clone());
+                }
+                inner.push(m_ij);
+            }
+        }
+
+        Self::Output {
+            n: self.n,
+            m: rhs.m,
+            inner,
+        }
+    }
+}
 
 macro_rules! add_matrix {
     ($el:ty) => {

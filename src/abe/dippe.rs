@@ -11,6 +11,18 @@ pub struct Dippe {
     g1_ua: G1Matrix,
 }
 
+pub struct PublicKey {
+    g2_sigma: G2,
+    g1_w_a: G1Matrix,
+    gt_alpha_a: GtVector,
+}
+
+pub struct PrivateKey {
+    sigma: Fr,
+    alpha: FrVector,
+    w: FrMatrix,
+}
+
 impl Dippe {
     pub fn new<R: CryptoRng + RngCore>(rand: &mut R, assumption_size: usize) -> Self {
         let a = FrMatrix::from_random(rand, assumption_size + 1, assumption_size);
@@ -25,6 +37,30 @@ impl Dippe {
             g1_a,
             g1_ua,
         }
+    }
+
+    pub fn generate_key_pair<R: CryptoRng + RngCore>(
+        &self,
+        rand: &mut R,
+    ) -> (PublicKey, PrivateKey) {
+        let privkey = PrivateKey {
+            sigma: rand.gen(),
+            alpha: FrVector::from_random(rand, self.assumption_size + 1, 1),
+            w: FrVector::from_random(rand, self.assumption_size + 1, self.assumption_size + 1),
+        };
+
+        let wt = privkey.w.transposed();
+
+        let gt_a = self.g1_a.pair_with_g2();
+        let gt_a_t = gt_a.transposed();
+
+        let pubkey = PublicKey {
+            g2_sigma: G2::one() * privkey.sigma.clone(),
+            g1_w_a: wt * self.g1_a.clone(),
+            gt_alpha_a: gt_a_t * privkey.alpha.clone(),
+        };
+
+        (pubkey, privkey)
     }
 }
 
