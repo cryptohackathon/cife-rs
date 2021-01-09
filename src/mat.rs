@@ -66,7 +66,6 @@ macro_rules! mult_matrix {
             fn mul(self, rhs: Matrix<$group>) -> Self::Output {
                 assert_eq!(self.m, rhs.n, "Addition with non-matching dimensions");
                 let mut inner = Vec::with_capacity(self.n * rhs.m);
-                println!("LHS: {:?} x RHS: {:?}", self, rhs);
 
                 // XXX should be doable by *move* instead of .clone().
                 // ij over target dimensions
