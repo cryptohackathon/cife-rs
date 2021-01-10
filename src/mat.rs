@@ -45,6 +45,10 @@ where
 }
 
 impl<T> Matrix<T> {
+    pub fn dims(&self) -> (usize, usize) {
+        (self.n, self.m)
+    }
+
     pub fn transposed(&self) -> Self
     where
         T: Clone,
