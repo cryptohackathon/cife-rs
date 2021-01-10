@@ -62,6 +62,15 @@ impl fmt::Debug for PrivateKey {
 /// - [`Dippe::create_conjunction_policy_vector`] to require conjunction of attributes,
 pub struct PolicyVector(pub FrVector);
 
+/// A Cipher bound to a [`PolicyVector`], used to encrypt against said policy.
+///
+/// The `Cipher` is constructed from [`Dippe::create_cipher`]
+pub struct Cipher<'a> {
+    policy: &'a PolicyVector,
+    c0: G1Vector,
+    ci: G1Matrix,
+}
+
 impl Dippe {
     pub fn new<R: CryptoRng + RngCore>(rand: &mut R, assumption_size: usize) -> Self {
         let a = FrMatrix::from_random(rand, assumption_size + 1, assumption_size);
@@ -126,6 +135,15 @@ impl Dippe {
         }
 
         PolicyVector(result)
+    }
+
+    /// Creates the DIPPE cipher for a given [`PolicyVector`]
+    pub fn create_cipher<'a>(&self, policy: &'a PolicyVector) -> Cipher<'a> {
+        Cipher {
+            policy,
+            c0: G1Vector::zeroes(self.assumption_size + 1, 1),
+            ci: G1Matrix::zeroes(policy.0.dims().0, self.assumption_size + 1),
+        }
     }
 }
 
