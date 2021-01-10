@@ -70,6 +70,27 @@ constructors!(Fr);
 constructors!(G1);
 constructors!(G2);
 
+impl<T> IntoIterator for Matrix<T> {
+    type Item = T;
+    type IntoIter = <Vec<T> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.inner.into_iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a Matrix<T>
+where
+    T: 'a,
+{
+    type Item = &'a T;
+    type IntoIter = <&'a [T] as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        (&self.inner).into_iter()
+    }
+}
+
 impl<T> Matrix<T> {
     pub fn dims(&self) -> (usize, usize) {
         (self.n, self.m)
