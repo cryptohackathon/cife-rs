@@ -44,6 +44,32 @@ where
     }
 }
 
+macro_rules! constructors {
+    ($obj:ty) => {
+        impl Matrix<$obj> {
+            pub fn ones(n: usize, m: usize) -> Self {
+                Self {
+                    n,
+                    m,
+                    inner: vec![<$obj>::one(); n * m],
+                }
+            }
+
+            pub fn zeroes(n: usize, m: usize) -> Self {
+                Self {
+                    n,
+                    m,
+                    inner: vec![<$obj>::zero(); n * m],
+                }
+            }
+        }
+    };
+}
+
+constructors!(Fr);
+constructors!(G1);
+constructors!(G2);
+
 impl<T> Matrix<T> {
     pub fn dims(&self) -> (usize, usize) {
         (self.n, self.m)
