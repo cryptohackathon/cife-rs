@@ -83,6 +83,26 @@ impl G1Matrix {
     }
 }
 
+impl<T> core::ops::IndexMut<usize> for Matrix<T> {
+    fn index_mut(&mut self, idx: usize) -> &mut Self::Output {
+        &mut self.inner[idx]
+    }
+}
+
+impl<T> core::ops::Index<usize> for Matrix<T> {
+    type Output = T;
+
+    fn index(&self, idx: usize) -> &Self::Output {
+        &self.inner[idx]
+    }
+}
+
+impl<T> core::ops::IndexMut<(usize, usize)> for Matrix<T> {
+    fn index_mut(&mut self, idx: (usize, usize)) -> &mut Self::Output {
+        &mut self.inner[idx.0 * self.m + idx.1]
+    }
+}
+
 impl<T> core::ops::Index<(usize, usize)> for Matrix<T> {
     type Output = T;
 
