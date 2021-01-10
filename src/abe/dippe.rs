@@ -113,7 +113,7 @@ impl Dippe {
         attribute_count: usize,
         pattern: &[usize],
     ) -> PolicyVector {
-        let mut result = FrVector::zeroes(1, attribute_count + 1);
+        let mut result = FrVector::zeroes(attribute_count + 1, 1);
 
         for &el in pattern {
             assert!(
@@ -147,7 +147,7 @@ mod tests {
         for policy_template in policies {
             let pol = d.create_conjunction_policy_vector(rng, attr_num, policy_template);
 
-            assert_eq!(pol.0.dims(), (1, attr_num + 1));
+            assert_eq!(pol.0.dims(), (attr_num + 1, 1));
 
             let mut sum = Fr::zero();
             for el in &pol.0 {
