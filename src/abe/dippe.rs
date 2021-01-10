@@ -56,6 +56,12 @@ impl fmt::Debug for PrivateKey {
     }
 }
 
+/// A policy vector used to encrypt.
+///
+/// A `PolicyVector` can be created manually, or through the methods provided by [Dippe], one of:
+/// - [Dippe::create_conjunction_policy_vector] to require conjunction of attributes,
+pub struct PolicyVector(pub FrVector);
+
 impl Dippe {
     pub fn new<R: CryptoRng + RngCore>(rand: &mut R, assumption_size: usize) -> Self {
         let a = FrMatrix::from_random(rand, assumption_size + 1, assumption_size);
@@ -96,6 +102,31 @@ impl Dippe {
 
         (pubkey, privkey)
     }
+
+    /// Creates a [PolicyVector] based on a conjunction policy of attributes.
+    ///
+    /// A message encrypted with the resulting [PolicyVector] will be decryptable if the decryptor
+    /// has *all* the attributes passed as `pattern` to this method.
+    pub fn create_conjunction_policy_vector<R: CryptoRng + RngCore>(
+        &self,
+        rand: &mut R,
+        attribute_count: usize,
+        pattern: &[usize],
+    ) -> PolicyVector {
+        let mut result = FrVector::zeroes(1, attribute_count + 1);
+
+        for &el in pattern {
+            assert!(
+                el < attribute_count,
+                "Attribute in pattern larger than attribute count."
+            );
+
+            result[el] = rand.gen();
+            result[attribute_count] = result[attribute_count] - result[el];
+        }
+
+        PolicyVector(result)
+    }
 }
 
 #[cfg(test)]
@@ -103,7 +134,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn generate_dippe() {
-        let _ = Dippe::new(&mut rand::thread_rng(), 2);
+    fn generate_dippe_conjunction_policy() {
+        let mut rng = rand::thread_rng();
+        let rng = &mut rng;
+
+        let d = Dippe::new(rng, 2);
+
+        let attr_num = 4;
+        let pol = d.create_conjunction_policy_vector(rng, attr_num, &[]);
+
+        assert_eq!(pol.0.dims(), (1, attr_num + 1));
     }
 }
