@@ -141,14 +141,31 @@ mod tests {
         let d = Dippe::new(rng, 2);
 
         let attr_num = 4;
-        let pol = d.create_conjunction_policy_vector(rng, attr_num, &[]);
 
-        assert_eq!(pol.0.dims(), (1, attr_num + 1));
+        let policies: &[&[usize]] = &[&[], &[1, 2]];
 
-        let mut sum = Fr::zero();
-        for el in &pol.0 {
-            sum = sum + el.clone();
+        for policy_template in policies {
+            let pol = d.create_conjunction_policy_vector(rng, attr_num, policy_template);
+
+            assert_eq!(pol.0.dims(), (1, attr_num + 1));
+
+            let mut sum = Fr::zero();
+            for el in &pol.0 {
+                sum = sum + el.clone();
+            }
+            assert!(sum.is_zero());
         }
-        assert!(sum.is_zero());
+    }
+
+    #[test]
+    #[should_panic]
+    fn generate_invalid_dippe_conjunction_policy() {
+        let mut rng = rand::thread_rng();
+        let rng = &mut rng;
+
+        let d = Dippe::new(rng, 2);
+
+        let attr_num = 4;
+        let _ = d.create_conjunction_policy_vector(rng, attr_num, &[7]);
     }
 }
