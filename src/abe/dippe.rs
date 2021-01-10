@@ -65,8 +65,9 @@ pub struct PolicyVector(pub FrVector);
 /// A Cipher bound to a [`PolicyVector`], used to encrypt against said policy.
 ///
 /// The `Cipher` is constructed from [`Dippe::create_cipher`]
-pub struct Cipher<'a> {
-    policy: &'a PolicyVector,
+pub struct Cipher<'d, 'pv> {
+    dippe: &'d Dippe,
+    policy: &'pv PolicyVector,
     c0: G1Vector,
     ci: G1Matrix,
 }
@@ -138,8 +139,9 @@ impl Dippe {
     }
 
     /// Creates the DIPPE cipher for a given [`PolicyVector`]
-    pub fn create_cipher<'a>(&self, policy: &'a PolicyVector) -> Cipher<'a> {
+    pub fn create_cipher<'d, 'pv>(&'d self, policy: &'pv PolicyVector) -> Cipher<'d, 'pv> {
         Cipher {
+            dippe: self,
             policy,
             c0: G1Vector::zeroes(self.assumption_size + 1, 1),
             ci: G1Matrix::zeroes(policy.0.dims().0, self.assumption_size + 1),
