@@ -24,7 +24,7 @@ impl fmt::Debug for Dippe {
 
 /// Public key of a DIPPE authority.
 ///
-/// A key-pair is generated with [Dippe::generate_key_pair]
+/// A key-pair is generated with [`Dippe::generate_key_pair`]
 pub struct PublicKey {
     g2_sigma: G2,
     g1_w_a: G1Matrix,
@@ -41,7 +41,7 @@ impl fmt::Debug for PublicKey {
 
 /// Private key of a DIPPE authority.
 ///
-/// A key-pair is generated with [Dippe::generate_key_pair]
+/// A key-pair is generated with [`Dippe::generate_key_pair`]
 pub struct PrivateKey {
     sigma: Fr,
     alpha: FrVector,
@@ -58,8 +58,8 @@ impl fmt::Debug for PrivateKey {
 
 /// A policy vector used to encrypt.
 ///
-/// A `PolicyVector` can be created manually, or through the methods provided by [Dippe], one of:
-/// - [Dippe::create_conjunction_policy_vector] to require conjunction of attributes,
+/// A `PolicyVector` can be created manually, or through the methods provided by [`Dippe`], one of:
+/// - [`Dippe::create_conjunction_policy_vector`] to require conjunction of attributes,
 pub struct PolicyVector(pub FrVector);
 
 impl Dippe {
@@ -103,9 +103,9 @@ impl Dippe {
         (pubkey, privkey)
     }
 
-    /// Creates a [PolicyVector] based on a conjunction policy of attributes.
+    /// Creates a [`PolicyVector`] based on a conjunction policy of attributes.
     ///
-    /// A message encrypted with the resulting [PolicyVector] will be decryptable if the decryptor
+    /// A message encrypted with the resulting [`PolicyVector`] will be decryptable if the decryptor
     /// has *all* the attributes passed as `pattern` to this method.
     pub fn create_conjunction_policy_vector<R: CryptoRng + RngCore>(
         &self,
