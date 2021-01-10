@@ -1,5 +1,6 @@
 [![pipeline status](https://gitlab.com/etrovub/smartnets/cife-rs/badges/master/pipeline.svg)](https://gitlab.com/etrovub/smartnets/cife-rs/-/commits/master)
 [![coverage report](https://gitlab.com/etrovub/smartnets/cife-rs/badges/master/coverage.svg)](https://gitlab.com/etrovub/smartnets/cife-rs/-/commits/master)
+[![cargo docs](https://img.shields.io/badge/doc-master-blue)](https://etrovub.gitlab.io/smartnets/cife-rs/doc/cife_rs/)
 
 
 # CiFE-rs - Functional encryption library
