@@ -144,5 +144,11 @@ mod tests {
         let pol = d.create_conjunction_policy_vector(rng, attr_num, &[]);
 
         assert_eq!(pol.0.dims(), (1, attr_num + 1));
+
+        let mut sum = Fr::zero();
+        for el in &pol.0 {
+            sum = sum + el.clone();
+        }
+        assert!(sum.is_zero());
     }
 }
