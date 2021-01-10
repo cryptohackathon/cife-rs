@@ -166,10 +166,7 @@ impl Dippe {
         let c0 = self.g1_a.clone() * s.clone();
         assert_eq!(c0.dims(), (self.assumption_size + 1, 1));
 
-        for m in 0..authorities.len() {
-            let authority = authorities[m];
-            let policy_x = policy.0[m];
-
+        for (m, (&authority, &policy_x)) in authorities.iter().zip(&policy.0).enumerate() {
             let g1_was = authority.g1_w_a.clone() * s.clone();
 
             let mut g1_x_ua_s = G1Vector::zeroes(self.assumption_size + 1, 1);
@@ -188,8 +185,7 @@ impl Dippe {
         }
 
         let mut c_prime = Gt::one();
-        for m in 0..authorities.len() {
-            let authority = authorities[m];
+        for authority in authorities {
             for k in 0..self.assumption_size {
                 c_prime = c_prime * authority.gt_alpha_a[k].clone().pow(s[k]);
             }
