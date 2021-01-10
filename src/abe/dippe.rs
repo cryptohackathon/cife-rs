@@ -62,14 +62,20 @@ impl fmt::Debug for PrivateKey {
 /// - [`Dippe::create_conjunction_policy_vector`] to require conjunction of attributes,
 pub struct PolicyVector(pub FrVector);
 
-/// A Cipher bound to a [`PolicyVector`], used to encrypt against said policy.
+impl PolicyVector {
+    pub fn len(&self) -> usize {
+        assert_eq!(self.0.dims().1, 1, "PolicyVector is not a vector");
+        self.0.dims().0
+    }
+}
+
+/// A CipherText bound, used to encrypt against said policy.
 ///
-/// The `Cipher` is constructed from [`Dippe::create_cipher`]
-pub struct Cipher<'d, 'pv> {
-    dippe: &'d Dippe,
-    policy: &'pv PolicyVector,
+/// The `CipherText` is constructed from [`Dippe::encrypt`]
+pub struct CipherText {
     c0: G1Vector,
     ci: G1Matrix,
+    c_prime: Gt,
 }
 
 impl Dippe {
@@ -138,14 +144,24 @@ impl Dippe {
         PolicyVector(result)
     }
 
-    /// Creates the DIPPE cipher for a given [`PolicyVector`]
-    pub fn create_cipher<'d, 'pv>(&'d self, policy: &'pv PolicyVector) -> Cipher<'d, 'pv> {
-        Cipher {
-            dippe: self,
-            policy,
-            c0: G1Vector::zeroes(self.assumption_size + 1, 1),
-            ci: G1Matrix::zeroes(policy.0.dims().0, self.assumption_size + 1),
-        }
+    /// Creates the `msg` with a given [`PolicyVector`].
+    pub fn encrypt(
+        &self,
+        policy: &PolicyVector,
+        msg: Gt,
+        authorities: &[&PublicKey],
+    ) -> CipherText {
+        assert_eq!(
+            policy.len(),
+            authorities.len(),
+            "matching authorities and policies"
+        );
+
+        let c0 = G1Vector::zeroes(self.assumption_size + 1, 1);
+        let ci = G1Matrix::zeroes(policy.0.dims().0, self.assumption_size + 1);
+        let c_prime = Gt::one();
+
+        CipherText { c0, ci, c_prime }
     }
 }
 
