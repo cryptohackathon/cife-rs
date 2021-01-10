@@ -145,8 +145,9 @@ impl Dippe {
     }
 
     /// Creates the `msg` with a given [`PolicyVector`].
-    pub fn encrypt(
+    pub fn encrypt<R: CryptoRng + RngCore>(
         &self,
+        rng: &mut R,
         policy: &PolicyVector,
         msg: Gt,
         authorities: &[&PublicKey],
@@ -157,9 +158,44 @@ impl Dippe {
             "matching authorities and policies"
         );
 
-        let c0 = G1Vector::zeroes(self.assumption_size + 1, 1);
-        let ci = G1Matrix::zeroes(policy.0.dims().0, self.assumption_size + 1);
-        let c_prime = Gt::one();
+        let mut ci = G1Matrix::zeroes(policy.0.dims().0, self.assumption_size + 1);
+
+        let s = FrVector::from_random(rng, self.assumption_size, 1);
+
+        // fe_mat_G1_mul_vec(&(cipher->C0), &(dippe->g1_A), &s);
+        let c0 = self.g1_a.clone() * s.clone();
+        assert_eq!(c0.dims(), (self.assumption_size + 1, 1));
+
+        for m in 0..authorities.len() {
+            let authority = authorities[m];
+            let policy_x = policy.0[m];
+
+            let g1_was = authority.g1_w_a.clone() * s.clone();
+
+            let mut g1_x_ua_s = G1Vector::zeroes(self.assumption_size + 1, 1);
+
+            for i in 0..(self.assumption_size + 1) {
+                for k in 0..self.assumption_size {
+                    g1_x_ua_s[i] = g1_x_ua_s[i] + self.g1_ua[(i, k)].clone() * s[k].clone();
+                }
+                g1_x_ua_s[i] = g1_x_ua_s[i] * policy_x;
+            }
+
+            for i in 0..(self.assumption_size + 1) {
+                ci[(m, i)] = g1_x_ua_s[i];
+                ci[(m, i)] = ci[(m, i)] + g1_was[i];
+            }
+        }
+
+        let mut c_prime = Gt::one();
+        for m in 0..authorities.len() {
+            let authority = authorities[m];
+            for k in 0..self.assumption_size {
+                c_prime = c_prime * authority.gt_alpha_a[k].clone().pow(s[k]);
+            }
+        }
+
+        c_prime = c_prime * msg;
 
         CipherText { c0, ci, c_prime }
     }

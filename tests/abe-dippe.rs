@@ -10,7 +10,7 @@ fn end_to_end_conjunction() {
     let (bob_pub, _bob_priv) = dippe.generate_key_pair(&mut rng);
 
     let attributes = 5;
-    let vec_len = attributes + 1;
+    let _vec_len = attributes + 1;
 
     let test_policies: &[(&[usize], bool)] = &[
         (&[0, 1, 3, 4], true),    // "11011" - valid
@@ -24,7 +24,9 @@ fn end_to_end_conjunction() {
     let pks = [
         &alice_pub, &bob_pub, &alice_pub, &bob_pub, &alice_pub, &bob_pub,
     ];
+    assert_eq!(pks.len(), _vec_len);
+    assert_eq!(test_pol_vec.len(), _vec_len);
 
     let msg = Gt::one();
-    let ciphertext = dippe.encrypt(&test_pol_vec, msg, &pks);
+    let ciphertext = dippe.encrypt(&mut rng, &test_pol_vec, msg, &pks);
 }
