@@ -1,6 +1,9 @@
 //! Decentralized inner-product predicate encryption.
 
+use std::fmt;
+
 use crate::mat::*;
+
 use rabe_bn::*;
 use rand::prelude::*;
 
@@ -9,6 +12,14 @@ pub struct Dippe {
     assumption_size: usize,
     g1_a: G1Matrix,
     g1_ua: G1Matrix,
+}
+
+impl fmt::Debug for Dippe {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Dippe")
+            .field("assumption_size", &self.assumption_size)
+            .finish()
+    }
 }
 
 /// Public key of a DIPPE authority.
@@ -20,6 +31,14 @@ pub struct PublicKey {
     gt_alpha_a: GtVector,
 }
 
+impl fmt::Debug for PublicKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PublicKey")
+            .field("assumption_size", &self.gt_alpha_a.dims().0)
+            .finish()
+    }
+}
+
 /// Private key of a DIPPE authority.
 ///
 /// A key-pair is generated with [Dippe::generate_key_pair]
@@ -27,6 +46,14 @@ pub struct PrivateKey {
     sigma: Fr,
     alpha: FrVector,
     w: FrMatrix,
+}
+
+impl fmt::Debug for PrivateKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PrivateKey")
+            .field("assumption_size", &(self.alpha.dims().0 - 1))
+            .finish()
+    }
 }
 
 impl Dippe {
