@@ -159,6 +159,51 @@ impl<T> core::ops::Index<(usize, usize)> for Matrix<T> {
 }
 
 macro_rules! mult_matrix {
+    ($scalar:ty) => {
+        /// Point-wise multiply a matrix with one element
+        impl core::ops::Mul<$scalar> for Matrix<$scalar> {
+            type Output = Matrix<$scalar>;
+
+            fn mul(self, rhs: $scalar) -> Self::Output {
+                // For some reason, rabe_bn expects group * field.
+                let inner = self.inner.into_iter().map(|x| rhs * x).collect();
+                Self::Output {
+                    n: self.n,
+                    m: self.m,
+                    inner,
+                }
+            }
+        }
+
+        /// Standard matrix multiplication
+        impl core::ops::Mul<Matrix<$scalar>> for Matrix<$scalar> {
+            type Output = Matrix<$scalar>;
+
+            fn mul(self, rhs: Matrix<$scalar>) -> Self::Output {
+                assert_eq!(self.m, rhs.n, "Addition with non-matching dimensions");
+                let mut inner = Vec::with_capacity(self.n * rhs.m);
+
+                // XXX should be doable by *move* instead of .clone().
+                // ij over target dimensions
+                for i in 0..self.n {
+                    for j in 0..rhs.m {
+                        let mut m_ij = <$scalar>::zero();
+                        for k in 0..self.m {
+                            // G * a = A, Mul implementation is slightly weird.
+                            m_ij = m_ij + rhs[(k, j)].clone() * self[(i, k)].clone();
+                        }
+                        inner.push(m_ij);
+                    }
+                }
+
+                Self::Output {
+                    n: self.n,
+                    m: rhs.m,
+                    inner,
+                }
+            }
+        }
+    };
     ($scalar:ty, $group:ty) => {
         /// Point-wise multiply a matrix with one element
         impl core::ops::Mul<$group> for Matrix<$scalar> {
@@ -170,6 +215,35 @@ macro_rules! mult_matrix {
                 Self::Output {
                     n: self.n,
                     m: self.m,
+                    inner,
+                }
+            }
+        }
+
+        /// Standard matrix multiplication
+        impl core::ops::Mul<Matrix<$scalar>> for Matrix<$group> {
+            type Output = Matrix<$group>;
+
+            fn mul(self, rhs: Matrix<$scalar>) -> Self::Output {
+                assert_eq!(self.m, rhs.n, "Addition with non-matching dimensions");
+                let mut inner = Vec::with_capacity(self.n * rhs.m);
+
+                // XXX should be doable by *move* instead of .clone().
+                // ij over target dimensions
+                for i in 0..self.n {
+                    for j in 0..rhs.m {
+                        let mut m_ij = <$group>::zero();
+                        for k in 0..self.m {
+                            // G * a = A, Mul implementation is slightly weird.
+                            m_ij = m_ij + self[(i, k)].clone() * rhs[(k, j)].clone();
+                        }
+                        inner.push(m_ij);
+                    }
+                }
+
+                Self::Output {
+                    n: self.n,
+                    m: rhs.m,
                     inner,
                 }
             }
@@ -208,7 +282,7 @@ macro_rules! mult_matrix {
 
 mult_matrix!(Fr, G1);
 mult_matrix!(Fr, G2);
-mult_matrix!(Fr, Fr);
+mult_matrix!(Fr);
 
 /// Standard matrix multiplication.
 ///
