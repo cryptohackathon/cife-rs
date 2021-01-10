@@ -43,6 +43,16 @@ build:host:nightly:
     - cargo build
     - cargo build --release
 
+build:wasm:nightly:
+  <<: *rust-nightly
+  stage: build
+  needs: []
+  before_script:
+    - rustup target add wasm32-unknown-unknown --toolchain nightly
+  script:
+    - cargo build --target wasm32-unknown-unknown
+    - cargo build --target wasm32-unknown-unknown --release
+
 build:host:nightly:docs:
   <<: *rust-nightly
   stage: build
