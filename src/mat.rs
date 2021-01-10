@@ -42,7 +42,9 @@ where
         }
         Self { n, m, inner }
     }
+}
 
+impl<T> Matrix<T> {
     pub fn transposed(&self) -> Self
     where
         T: Clone,
