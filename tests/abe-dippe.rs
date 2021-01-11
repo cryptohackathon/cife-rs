@@ -1,3 +1,5 @@
+use std::convert::TryFrom;
+
 use cife_rs::abe::dippe::*;
 use rabe_bn::*;
 
@@ -43,7 +45,7 @@ fn end_to_end_conjunction() {
     let ciphertext = dippe.encrypt(&mut rng, &test_pol_vec, msg, &pks);
 
     // Every test policy gets a test user
-    for (i, (policy, _validity)) in test_policies.into_iter().enumerate() {
+    for (i, &(policy, valid)) in test_policies.into_iter().enumerate() {
         let mut usks = Vec::with_capacity(vec_len);
         let user_policy = dippe.create_attribute_vector(attributes, policy);
         let gid = format!("TESTGID{}", i);
@@ -55,6 +57,16 @@ fn end_to_end_conjunction() {
                 gid.as_bytes(),
                 &user_policy,
             ));
+        }
+        let upk: Result<UserPrivateKeySlice, _> = usks.into_iter().collect();
+        let upk = UserPrivateKey::try_from(upk.unwrap()).unwrap();
+
+        let recovered = dippe.decrypt(&upk, ciphertext.clone(), &user_policy, gid.as_bytes());
+
+        if valid {
+            assert_eq!(Vec::<u8>::from(recovered), Vec::from(msg));
+        } else {
+            assert_ne!(Vec::<u8>::from(recovered), Vec::from(msg));
         }
     }
 }

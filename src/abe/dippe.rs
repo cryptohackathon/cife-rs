@@ -193,6 +193,7 @@ impl std::convert::TryFrom<UserPrivateKeySlice> for UserPrivateKey {
 /// A CipherText bound, used to encrypt against said policy.
 ///
 /// The `CipherText` is constructed from [`Dippe::encrypt`]
+#[derive(Clone)]
 pub struct CipherText {
     c0: G1Vector,
     ci: G1Matrix,
@@ -406,6 +407,45 @@ impl Dippe {
             idx: authority_index,
             attrs: authorities.len(),
         }
+    }
+
+    /// Decrypt a given Ciphertext
+    // XXX consider moving the AV in the UPK,
+    //     this gives extra insurance over the |upk| shares.
+    pub fn decrypt(
+        &self,
+        upk: &UserPrivateKey,
+        c: CipherText,
+        av: &AttributeVector,
+        gid: &[u8],
+    ) -> Gt {
+        let av_str = av.to_string();
+
+        // c0_k
+        let mut c0_k = Gt::one();
+        for i in 0..(self.assumption_size + 1) {
+            c0_k = c0_k * pairing(c.c0[i], upk.0[i]);
+        }
+
+        // ci_H
+        let mut ci_h = Gt::one();
+        for i in 0..(self.assumption_size + 1) {
+            let mut ci_vi = G1::zero();
+            for j in 0..av.len() {
+                ci_vi = ci_vi + c.ci[(j, i)] * av.0[j];
+            }
+            let mut hash = Sha256::new();
+            hash.update(i.to_string());
+            hash.update("|");
+            hash.update(gid);
+            hash.update("|");
+            hash.update(&av_str);
+
+            let g2_h = G2::hash_to_group(hash);
+            ci_h = ci_h * pairing(ci_vi, g2_h);
+        }
+
+        c.c_prime * (c0_k * ci_h).inverse()
     }
 }
 
