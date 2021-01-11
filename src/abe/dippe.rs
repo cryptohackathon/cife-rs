@@ -403,12 +403,14 @@ mod tests {
                     continue;
                 }
             };
-            let upk: Result<UserPrivateKey, _> = UserPrivateKey::try_from(collection);
+            let upk: Result<UserPrivateKey, _> = UserPrivateKey::try_from(collection.clone());
             let _upk = if let Ok(upk) = upk {
                 assert!(is_complete);
+                assert!(collection.missing().is_empty());
                 upk
             } else {
                 assert!(!is_complete);
+                assert!(!collection.missing().is_empty());
                 continue;
             };
         }
