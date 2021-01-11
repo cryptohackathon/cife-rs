@@ -4,6 +4,7 @@ use std::fmt;
 
 use crate::mat::*;
 
+use bitvec::prelude::*;
 use rabe_bn::*;
 use rand::prelude::*;
 
@@ -66,6 +67,99 @@ impl PolicyVector {
     pub fn len(&self) -> usize {
         assert_eq!(self.0.dims().1, 1, "PolicyVector is not a vector");
         self.0.dims().0
+    }
+}
+
+/// A slice of a decryption key, issued by an authority.
+///
+/// Internally, this consists of a key slice group element and the index of the attribute this
+/// slice corresponds to.
+#[derive(Clone)]
+pub struct UserPrivateKeyPart {
+    inner: G2,
+    idx: usize,
+    attrs: usize,
+}
+
+///
+#[derive(Clone)]
+pub struct UserPrivateKeySlice {
+    sum: G2,
+    missing: BitVec,
+}
+
+impl UserPrivateKeySlice {
+    pub fn is_complete(&self) -> bool {
+        !self.missing.any()
+    }
+
+    pub fn missing(&self) -> Vec<usize> {
+        let mut missing = vec![];
+        for (i, bit) in self.missing.iter().enumerate() {
+            if *bit {
+                missing.push(i);
+            }
+        }
+        missing
+    }
+}
+
+/// A slice of a decryption key, issued by an authority.
+#[derive(Clone)]
+pub struct UserPrivateKey(G2);
+
+impl core::iter::FromIterator<UserPrivateKeyPart> for Result<UserPrivateKeySlice, anyhow::Error> {
+    fn from_iter<T>(parts: T) -> Result<UserPrivateKeySlice, anyhow::Error>
+    where
+        T: IntoIterator<Item = UserPrivateKeyPart>,
+    {
+        let mut upks = None;
+
+        for part in parts {
+            let upks = if let Some(upks) = upks.as_mut() {
+                upks
+            } else {
+                upks = Some(UserPrivateKeySlice {
+                    sum: G2::zero(),
+                    missing: bitvec!(1; part.attrs),
+                });
+                upks.as_mut().unwrap()
+            };
+
+            if part.attrs != upks.missing.len() {
+                return Err(anyhow::anyhow!(
+                    "Key parts with distinct attribute set sizes"
+                ));
+            }
+
+            if !upks.missing[part.idx] {
+                return Err(anyhow::anyhow!(
+                    "Overlapping key parts at attribute {}",
+                    part.idx
+                ));
+            }
+
+            *upks.missing.get_mut(part.idx).unwrap() = false;
+            upks.sum = upks.sum + part.inner;
+        }
+
+        upks.ok_or(anyhow::anyhow!("no parts in iterator"))
+    }
+}
+
+impl std::convert::TryFrom<UserPrivateKeySlice> for UserPrivateKey {
+    type Error = anyhow::Error;
+
+    fn try_from(upks: UserPrivateKeySlice) -> Result<UserPrivateKey, Self::Error> {
+        if upks.is_complete() {
+            Ok(UserPrivateKey(upks.sum))
+        } else {
+            let missing = upks.missing();
+            Err(anyhow::anyhow!(
+                "incomplete UserPrivateKeySlice: missing {:?}",
+                missing
+            ))
+        }
     }
 }
 
@@ -195,11 +289,22 @@ impl Dippe {
 
         CipherText { c0, ci, c_prime }
     }
+
+    /// Given the set of *all* authorities and one secret authority key,
+    pub fn generate_user_private_key_part(
+        &self,
+        private_authority_key: PrivateKey,
+        authorities: &[PublicKey],
+        pv: PolicyVector,
+    ) -> UserPrivateKeyPart {
+        todo!()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::convert::TryFrom;
 
     #[test]
     fn generate_dippe_conjunction_policy() {
@@ -235,5 +340,77 @@ mod tests {
 
         let attr_num = 4;
         let _ = d.create_conjunction_policy_vector(rng, attr_num, &[7]);
+    }
+
+    #[test]
+    fn key_parts() {
+        let part1 = UserPrivateKeyPart {
+            inner: G2::one(),
+            idx: 0,
+            attrs: 3,
+        };
+        let part2 = UserPrivateKeyPart {
+            inner: G2::one(),
+            idx: 1,
+            attrs: 3,
+        };
+        let part3 = UserPrivateKeyPart {
+            inner: G2::one(),
+            idx: 2,
+            attrs: 3,
+        };
+        let partx = UserPrivateKeyPart {
+            inner: G2::one(),
+            idx: 5,
+            attrs: 6,
+        };
+
+        // parts, can_collect, is_complete
+        let part_tests = vec![
+            // tests collectable but not finishable.
+            (vec![part1.clone(), part3.clone()], true, false),
+            (vec![part1.clone(), part2.clone()], true, false),
+            (vec![part1.clone(), part2.clone()], true, false),
+            // tests overlap
+            (vec![part2.clone(), part2.clone()], false, false),
+            // Distinct set sizes
+            (vec![part2.clone(), partx.clone()], false, false),
+            // no parts -> not collectable
+            (vec![], false, false),
+            // test complete key
+            (
+                vec![part2.clone(), part1.clone(), part3.clone()],
+                true,
+                true,
+            ),
+            // Finally something that should work.
+            (vec![part1, part2, part3], true, true),
+        ];
+
+        for (i, (parts, collectable, is_complete)) in part_tests.into_iter().enumerate() {
+            let collection: Result<UserPrivateKeySlice, _> = parts.into_iter().collect();
+            let collection = match collection {
+                Ok(collection) => {
+                    assert!(
+                        collectable,
+                        "Test {} is not collectable but expected collectable.",
+                        i
+                    );
+                    collection
+                }
+                Err(err) => {
+                    assert!(!collectable, "Test {}: {}", i, err);
+                    continue;
+                }
+            };
+            let upk: Result<UserPrivateKey, _> = UserPrivateKey::try_from(collection);
+            let _upk = if let Ok(upk) = upk {
+                assert!(is_complete);
+                upk
+            } else {
+                assert!(!is_complete);
+                continue;
+            };
+        }
     }
 }
