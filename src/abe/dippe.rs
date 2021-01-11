@@ -7,6 +7,7 @@ use crate::mat::*;
 use bitvec::prelude::*;
 use rabe_bn::*;
 use rand::prelude::*;
+use sha2::{Digest, Sha256};
 
 /// Dippe system parameters
 pub struct Dippe {
@@ -82,6 +83,15 @@ impl AttributeVector {
     pub fn len(&self) -> usize {
         assert_eq!(self.0.dims().1, 1, "AttributeVector is not a vector");
         self.0.dims().0
+    }
+}
+
+impl fmt::Display for AttributeVector {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for _i in 0..self.len() {
+            write!(f, "XXX ")?;
+        }
+        Ok(())
     }
 }
 
@@ -325,15 +335,77 @@ impl Dippe {
     }
 
     /// Given the set of *all* authorities and one secret authority key,
-    /// generates a [`UserPrivateKeyPart`].
+    /// generates a [`UserPrivateKeyPart`] for a specific set of attributes.
     pub fn generate_user_private_key_part(
         &self,
         private_authority_key: &PrivateKey,
         authority_index: usize,
         authorities: &[&PublicKey],
-        av: AttributeVector,
+        gid: &[u8],
+        av: &AttributeVector,
     ) -> UserPrivateKeyPart {
-        todo!()
+        assert!(av.len() == authorities.len());
+        assert!(authority_index < authorities.len());
+        let av_str = av.to_string();
+
+        let mut µ = G2Vector::zeroes(self.assumption_size + 1, 1);
+
+        for j in 0..authorities.len() {
+            let yσ = authorities[j].g2_sigma.clone() * private_authority_key.sigma.clone();
+            // XXX cifer uses hex encoding of the reduced x and y coordinates, cfr. ECP2_BN254_toOctet
+            let yσ = serde_json::to_string(&yσ).expect("serialized G2 point");
+
+            for i in 0..(self.assumption_size + 1) {
+                let mut hash = Sha256::new();
+                hash.update(i.to_string());
+                hash.update("|");
+                hash.update(&yσ);
+                hash.update("|");
+                hash.update(gid);
+                hash.update("|");
+                hash.update(&av_str);
+
+                if j < authority_index {
+                    µ[i] = µ[i] + G2::hash_to_group(hash);
+                } else if j > authority_index {
+                    µ[i] = µ[i] - G2::hash_to_group(hash);
+                }
+            }
+        }
+
+        // g2^h (k+1 x 1)
+        let mut g2_h = G2Vector::zeroes(self.assumption_size + 1, 1);
+        for i in 0..(self.assumption_size + 1) {
+            let mut hash = Sha256::new();
+            hash.update(i.to_string());
+            hash.update("|");
+            hash.update(gid);
+            hash.update("|");
+            hash.update(&av_str);
+
+            g2_h[i] = G2::hash_to_group(hash);
+        }
+
+        let mut k_i = G2Vector::zeroes(self.assumption_size + 1, 1);
+        for i in 0..(self.assumption_size + 1) {
+            for k in 0..(self.assumption_size + 1) {
+                k_i[i] = k_i[i] + g2_h[k] * private_authority_key.w[(i, k)].clone();
+            }
+            // add vi
+            k_i[i] = k_i[i] * av.0[authority_index];
+            // negate
+            k_i[i] = -k_i[i];
+            // add alpha
+            k_i[i] = k_i[i] + G2::one() * private_authority_key.alpha[i];
+            // add mue
+            k_i[i] = k_i[i] + µ[i];
+        }
+
+        UserPrivateKeyPart {
+            inner: k_i,
+            idx: authority_index,
+            attrs: authorities.len(),
+        }
     }
 }
 
