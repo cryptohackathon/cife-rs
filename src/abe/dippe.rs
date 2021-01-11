@@ -449,4 +449,38 @@ mod tests {
             };
         }
     }
+
+    #[test]
+    fn conjunction_policy_vector_inner_products() {
+        let attribs = 5;
+        let policy = &[0, 1, 4];
+        let users: &[(&[usize], bool)] = &[
+            (&[0, 1, 3, 4], true),    // "11011" - valid
+            (&[0, 1, 2, 3, 4], true), // "11111" - valid
+            (&[1, 4], false),         // "01001" - invalid
+            (&[0, 1, 3], false),      // "11010" - invalid
+        ];
+
+        let mut rng = rand::thread_rng();
+        let rng = &mut rng;
+
+        let d = Dippe::new(rng, 2);
+
+        let pv = d.create_conjunction_policy_vector(rng, attribs, policy);
+
+        for &(user, valid) in users {
+            let pv = pv.clone();
+            let av = d.create_attribute_vector(attribs, user);
+            assert_eq!(av.0.dims(), pv.0.dims());
+            assert_eq!(av.0.dims(), (attribs + 1, 1));
+
+            let ip = av.0.transposed() * pv.0;
+            assert_eq!(ip.dims(), (1, 1));
+            if valid {
+                assert!(ip[0].is_zero());
+            } else {
+                assert!(!ip[0].is_zero());
+            }
+        }
+    }
 }
