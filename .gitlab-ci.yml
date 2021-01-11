@@ -27,7 +27,7 @@ stages:
     <<: *rust-cache
     key: rust-nightly
 
-build:host:stable:
+.build:host:stable:
   <<: *rust-stable
   stage: build
   needs: []
@@ -63,7 +63,7 @@ build:host:nightly:docs:
     paths:
       - target/doc
 
-test:stable:
+.test:stable:
   <<: *rust-stable
   stage: test
   needs: []
