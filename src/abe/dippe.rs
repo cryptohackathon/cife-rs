@@ -61,11 +61,26 @@ impl fmt::Debug for PrivateKey {
 ///
 /// A `PolicyVector` can be created manually, or through the methods provided by [`Dippe`], one of:
 /// - [`Dippe::create_conjunction_policy_vector`] to require conjunction of attributes,
+#[derive(Clone)]
 pub struct PolicyVector(pub FrVector);
 
 impl PolicyVector {
     pub fn len(&self) -> usize {
         assert_eq!(self.0.dims().1, 1, "PolicyVector is not a vector");
+        self.0.dims().0
+    }
+}
+
+/// An attribute vector used to decrypt.
+///
+/// An `AttributeVector` can be created manually, or through the method provided by [`Dippe`]:
+/// - [`Dippe::create_attribute_vector`] to require conjunction of attributes,
+#[derive(Clone)]
+pub struct AttributeVector(pub FrVector);
+
+impl AttributeVector {
+    pub fn len(&self) -> usize {
+        assert_eq!(self.0.dims().1, 1, "AttributeVector is not a vector");
         self.0.dims().0
     }
 }
@@ -238,6 +253,23 @@ impl Dippe {
         PolicyVector(result)
     }
 
+    /// Defines the attribute vector for key generation.
+    pub fn create_attribute_vector(
+        &self,
+        attribute_count: usize,
+        pattern: &[usize],
+    ) -> AttributeVector {
+        let mut result = FrVector::zeroes(attribute_count + 1, 1);
+        for &el in pattern {
+            assert!(el < attribute_count);
+            result[el] = Fr::one();
+        }
+
+        result[attribute_count] = Fr::one();
+
+        AttributeVector(result)
+    }
+
     /// Creates the `msg` with a given [`PolicyVector`].
     pub fn encrypt<R: CryptoRng + RngCore>(
         &self,
@@ -291,11 +323,13 @@ impl Dippe {
     }
 
     /// Given the set of *all* authorities and one secret authority key,
+    /// generates a [`UserPrivateKeyPart`].
     pub fn generate_user_private_key_part(
         &self,
-        private_authority_key: PrivateKey,
-        authorities: &[PublicKey],
-        pv: PolicyVector,
+        private_authority_key: &PrivateKey,
+        authority_index: usize,
+        authorities: &[&PublicKey],
+        av: AttributeVector,
     ) -> UserPrivateKeyPart {
         todo!()
     }
