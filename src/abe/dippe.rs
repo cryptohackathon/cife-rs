@@ -91,7 +91,7 @@ impl AttributeVector {
 /// slice corresponds to.
 #[derive(Clone)]
 pub struct UserPrivateKeyPart {
-    inner: G2,
+    inner: G2Vector,
     idx: usize,
     attrs: usize,
 }
@@ -99,7 +99,7 @@ pub struct UserPrivateKeyPart {
 ///
 #[derive(Clone)]
 pub struct UserPrivateKeySlice {
-    sum: G2,
+    sum: G2Vector,
     missing: BitVec,
 }
 
@@ -121,7 +121,7 @@ impl UserPrivateKeySlice {
 
 /// A slice of a decryption key, issued by an authority.
 #[derive(Clone)]
-pub struct UserPrivateKey(G2);
+pub struct UserPrivateKey(G2Vector);
 
 impl core::iter::FromIterator<UserPrivateKeyPart> for Result<UserPrivateKeySlice, anyhow::Error> {
     fn from_iter<T>(parts: T) -> Result<UserPrivateKeySlice, anyhow::Error>
@@ -134,8 +134,9 @@ impl core::iter::FromIterator<UserPrivateKeyPart> for Result<UserPrivateKeySlice
             let upks = if let Some(upks) = upks.as_mut() {
                 upks
             } else {
+                let dims = part.inner.dims();
                 upks = Some(UserPrivateKeySlice {
-                    sum: G2::zero(),
+                    sum: G2Vector::zeroes(dims.0, dims.1),
                     missing: bitvec!(1; part.attrs),
                 });
                 upks.as_mut().unwrap()
@@ -155,7 +156,8 @@ impl core::iter::FromIterator<UserPrivateKeyPart> for Result<UserPrivateKeySlice
             }
 
             *upks.missing.get_mut(part.idx).unwrap() = false;
-            upks.sum = upks.sum + part.inner;
+            // XXX should be move-out-move-in, possibly abusing the Option.
+            upks.sum = upks.sum.clone() + part.inner;
         }
 
         upks.ok_or(anyhow::anyhow!("no parts in iterator"))
@@ -379,22 +381,22 @@ mod tests {
     #[test]
     fn key_parts() {
         let part1 = UserPrivateKeyPart {
-            inner: G2::one(),
+            inner: G2Vector::ones(2, 1),
             idx: 0,
             attrs: 3,
         };
         let part2 = UserPrivateKeyPart {
-            inner: G2::one(),
+            inner: G2Vector::ones(2, 1),
             idx: 1,
             attrs: 3,
         };
         let part3 = UserPrivateKeyPart {
-            inner: G2::one(),
+            inner: G2Vector::ones(2, 1),
             idx: 2,
             attrs: 3,
         };
         let partx = UserPrivateKeyPart {
-            inner: G2::one(),
+            inner: G2Vector::ones(2, 1),
             idx: 5,
             attrs: 6,
         };
