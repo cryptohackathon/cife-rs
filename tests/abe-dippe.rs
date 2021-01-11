@@ -53,7 +53,7 @@ fn end_to_end_conjunction() {
                 j,
                 &pks,
                 gid.as_bytes(),
-                user_policy.clone(),
+                &user_policy,
             ));
         }
     }
