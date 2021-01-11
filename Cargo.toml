@@ -12,6 +12,7 @@ harness = false
 
 [dependencies]
 anyhow = "1.0"
+bitvec = "0.20"
 rand = "0.7"
 thiserror = "1.0"
 rabe-bn = "0.4"
