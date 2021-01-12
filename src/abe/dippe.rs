@@ -352,7 +352,8 @@ impl Dippe {
         let mut µ = G2Vector::zeroes(self.assumption_size + 1, 1);
 
         for j in 0..authorities.len() {
-            let yσ = authorities[j].g2_sigma.clone() * private_authority_key.sigma.clone();
+            let mut yσ = authorities[j].g2_sigma.clone() * private_authority_key.sigma.clone();
+            yσ.normalize();
             // XXX cifer uses hex encoding of the reduced x and y coordinates, cfr. ECP2_BN254_toOctet
             let yσ = serde_json::to_string(&yσ).expect("serialized G2 point");
 
