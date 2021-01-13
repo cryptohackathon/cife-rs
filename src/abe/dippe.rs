@@ -1,4 +1,125 @@
 //! Decentralized inner-product predicate encryption.
+//!
+//! This PE scheme is an implementation of DIPPE, an IPPE based scheme by
+//! [Yan Michalevsky and Marc Joye, 2018](https://eprint.iacr.org/2018/753).
+//!
+//! This predicate encryption scheme allows a user to decrypt a ciphertext when their attribute
+//! vector *v* is orthogonal to the predicate vector *x*, i.e. their *inner product* equals zero.
+//!
+//! The paper suggests several applications of this idea.
+//! Currently, only the conjunction policy is implemented, although the vectors can also be
+//! manually constructed.
+//! The conjunction policy allows Carol to decrypt a message when her [`UserPrivateKey`] consists
+//! of a superset of the [`CipherText`]'s [`AttributeVector`].
+//! For example, if Carol has the attributes `[0, 1, 3, 4]`, she can decrypt a cipher text that has
+//! been encrypted with `[0, 3, 4]`, but not one encrypted with `[0, 2, 4]`.
+//!
+//! # Usage
+//!
+//! In general, using the scheme consists of the following steps:
+//! 1. **Setup**: Generate either a randomized [`Dippe`] through [`Dippe::randomized`], or a
+//!    deterministic one based on a public common reference string through [`Dippe::new`].
+//!    This is the global system setup for your application.
+//!
+//!    These methods also require to choose the security parameter *k* for the *k*-lin assumption.
+//!
+//! 2. **Generate authority keys**: Generate authority keys for all authorities that will hand out
+//!    attributes to end users.
+//!
+//!    For every authority, call [`Dippe::generate_key_pair`].  The resulting  public keys are used
+//!    for encryption against a policy, the private keys are used to generate [`UserPrivateKey`]s.
+//!
+//!    From here, encryption and user key generation can be done concurrently, as long as the
+//!    set of attributes stays the same.
+//!
+//! 3. **Generate user keys**: as an authority use [`Dippe::generate_user_private_key_part`] for
+//!    every attribute that the authority hands out.
+//!    The authorities return the generated keys to the respective users.
+//!
+//!    **Encrypt**: Use [`Dippe::encrypt`] to produce a [`CipherText`] from a [`rabe_bn::Gt`] plain
+//!    text.  This method requires passing the authority public keys together with the
+//!    [`PolicyVector`] policy.
+//!
+//!    **Decrypt**: Constructed from an iterator of [`UserPrivateKeyPart`]s, the holder of the
+//!    [`UserPrivateKey`] can use the [`Dippe::decrypt`] method to recover the original [`rabe_bn::Gt`]
+//!    element.
+//!
+//! # Example with conjunctive attribute policy
+//!
+//! ```rust
+//! use std::convert::TryFrom;
+//!
+//! use cife_rs::abe::dippe::*;
+//! use rabe_bn::Gt;
+//!
+//! let mut rng = rand::thread_rng();
+//! let dippe = Dippe::new(b"my application name", 2);
+//!
+//! // We declare two authorities.
+//! // Alice will be responsible for the even-indexed attributes,
+//! // while Bob takes care of the odd-indexed attributes.
+//! let (alice_pub, alice_priv) = dippe.generate_key_pair(&mut rng);
+//! let (bob_pub, bob_priv) = dippe.generate_key_pair(&mut rng);
+//!
+//! // Our system has five attributes, numbered 0 through 4
+//! let attributes = 5;
+//! // The attribute vector, in fact an implementation detail, is one element longer than the
+//! // attribute count.
+//! let vec_len = attributes + 1;
+//!
+//! // Carol will request attributes 0, 1, 3 and 4.
+//! let carol_policy = &[0, 1, 3, 4];
+//!
+//! // We encrypt with this, and try carol will attempt the decryption.
+//! // As you may notice, [0, 1, 4] is a subset of Carol's policy vector.
+//! // Since we encrypt with the *conjunction* policy, this means that Carol will be able to
+//! // decrypt, as long as her policy vector is indeed a superset of the conjunction policy.
+//! let encryption_policy = dippe.create_conjunction_policy_vector(&mut rng, attributes, &[0, 1, 4]);
+//!
+//! // These arrays define what attributes are "owned"/attributed by what authorities.
+//! // In this example, even attributes are handed out by Alice, uneven by Bob.
+//! let pks = [
+//!     &alice_pub, &bob_pub, &alice_pub, &bob_pub, &alice_pub, &bob_pub,
+//! ];
+//! let priv_keys = [
+//!     &alice_priv,
+//!     &bob_priv,
+//!     &alice_priv,
+//!     &bob_priv,
+//!     &alice_priv,
+//!     &bob_priv,
+//! ];
+//!
+//! // The message that we send is very simple: it's the number 1.
+//! let msg = Gt::one();
+//! // Encrypt yields a `CipherText` object, which implements serde's traits for easy transport.
+//! let ciphertext = dippe.encrypt(&mut rng, &encryption_policy, msg, &pks);
+//! let ciphertext_serialized = serde_json::to_string(&ciphertext).expect("serialized json");
+//!
+//! // Now, Carol will request her private key.
+//! // She needs to talk with every authority, and request a KeyPart for every attribute.
+//! let mut usks = Vec::with_capacity(vec_len);
+//! let user_policy = dippe.create_attribute_vector(attributes, carol_policy);
+//! let gid = b"Carol";
+//! for j in 0..vec_len {
+//!     usks.push(dippe.generate_user_private_key_part(
+//!         priv_keys[j],
+//!         j,
+//!         &pks,
+//!         gid,
+//!         &user_policy,
+//!     ));
+//! }
+//! // After having requested all the KeyParts (those requests can be batched!), she needs to
+//! // aggregate them into a `UserPrivateKey` for use in decryption.
+//! let upk: Result<UserPrivateKeySlice, _> = usks.into_iter().collect();
+//! let upk = UserPrivateKey::try_from(upk.unwrap()).unwrap();
+//!
+//! // Finally, Carol can deserialize and decrypt the ciphertext.
+//! let ciphertext = serde_json::from_str(&ciphertext_serialized).expect("correct json");
+//! let recovered = dippe.decrypt(&upk, ciphertext, &user_policy, gid);
+//! assert_eq!(Vec::<u8>::from(recovered), Vec::from(msg));
+//! ```
 
 use std::fmt;
 
