@@ -151,7 +151,7 @@ impl fmt::Debug for Dippe {
 /// Public key of a DIPPE authority.
 ///
 /// A key-pair is generated with [`Dippe::generate_key_pair`]
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Clone, serde::Deserialize, serde::Serialize)]
 pub struct PublicKey {
     g2_sigma: G2,
     g1_w_a: G1Matrix,
@@ -169,7 +169,7 @@ impl fmt::Debug for PublicKey {
 /// Private key of a DIPPE authority.
 ///
 /// A key-pair is generated with [`Dippe::generate_key_pair`]
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Clone, serde::Deserialize, serde::Serialize)]
 pub struct PrivateKey {
     sigma: Fr,
     alpha: FrVector,
