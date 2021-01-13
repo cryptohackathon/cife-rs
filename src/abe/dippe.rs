@@ -201,9 +201,56 @@ pub struct CipherText {
 }
 
 impl Dippe {
-    pub fn new<R: CryptoRng + RngCore>(rand: &mut R, assumption_size: usize) -> Self {
+    /// Constructs a new random DIPPE system
+    pub fn randomized<R: CryptoRng + RngCore>(rand: &mut R, assumption_size: usize) -> Self {
         let a = FrMatrix::from_random(rand, assumption_size + 1, assumption_size);
         let ut = FrMatrix::from_random(rand, assumption_size + 1, assumption_size + 1);
+        let uta = ut * a.clone();
+
+        let g1_a = a * G1::one();
+        let g1_ua = uta * G1::one();
+
+        Self {
+            assumption_size,
+            g1_a,
+            g1_ua,
+        }
+    }
+
+    /// Deterministally constructs a DIPPE system based on a seed.
+    ///
+    /// ```rust
+    /// # use cife_rs::abe::dippe::Dippe;
+    /// let dippe = Dippe::new(b"my application name", 2);
+    ///
+    /// // ... and on another system, the same seed always yields the same system parameters.
+    /// let dippe2 = Dippe::new(b"my application name", 2);
+    /// ```
+    pub fn new(seed: &[u8], assumption_size: usize) -> Self {
+        use tiny_keccak::{Hasher, Xof};
+
+        let mut shake = tiny_keccak::Shake::v256();
+        shake.update(seed);
+
+        let mut a = FrMatrix::zeroes(assumption_size + 1, assumption_size);
+
+        let mut buf = [0u8; 64];
+        for i in 0..a.dims().0 {
+            for j in 0..a.dims().1 {
+                shake.squeeze(&mut buf);
+                a[(i, j)] = Fr::interpret(&buf);
+            }
+        }
+
+        let mut ut = FrMatrix::zeroes(assumption_size + 1, assumption_size + 1);
+
+        for i in 0..ut.dims().0 {
+            for j in 0..ut.dims().1 {
+                shake.squeeze(&mut buf);
+                ut[(i, j)] = Fr::interpret(&buf);
+            }
+        }
+
         let uta = ut * a.clone();
 
         let g1_a = a * G1::one();
@@ -456,11 +503,29 @@ mod tests {
     use core::convert::TryFrom;
 
     #[test]
+    fn deterministic_dippe_domain_separation() {
+        let dippe1 = Dippe::new(b"foo bar", 2);
+        let dippe2 = Dippe::new(b"foo bat", 2);
+
+        for i in 0..dippe1.g1_ua.dims().0 {
+            for j in 0..dippe1.g1_ua.dims().1 {
+                assert!(dippe1.g1_ua[(i, j)] != dippe2.g1_ua[(i, j)]);
+            }
+        }
+
+        for i in 0..dippe1.g1_a.dims().0 {
+            for j in 0..dippe1.g1_a.dims().1 {
+                assert!(dippe1.g1_a[(i, j)] != dippe2.g1_a[(i, j)]);
+            }
+        }
+    }
+
+    #[test]
     fn generate_dippe_conjunction_policy() {
         let mut rng = rand::thread_rng();
         let rng = &mut rng;
 
-        let d = Dippe::new(rng, 2);
+        let d = Dippe::randomized(rng, 2);
 
         let attr_num = 4;
 
@@ -485,7 +550,7 @@ mod tests {
         let mut rng = rand::thread_rng();
         let rng = &mut rng;
 
-        let d = Dippe::new(rng, 2);
+        let d = Dippe::randomized(rng, 2);
 
         let attr_num = 4;
         let _ = d.create_conjunction_policy_vector(rng, attr_num, &[7]);
@@ -579,7 +644,7 @@ mod tests {
         let mut rng = rand::thread_rng();
         let rng = &mut rng;
 
-        let d = Dippe::new(rng, 2);
+        let d = Dippe::randomized(rng, 2);
 
         let pv = d.create_conjunction_policy_vector(rng, attribs, policy);
 

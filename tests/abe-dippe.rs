@@ -6,7 +6,7 @@ use rabe_bn::*;
 #[test]
 fn end_to_end_conjunction() {
     let mut rng = rand::thread_rng();
-    let dippe = Dippe::new(&mut rng, 2);
+    let dippe = Dippe::randomized(&mut rng, 2);
 
     let (alice_pub, alice_priv) = dippe.generate_key_pair(&mut rng);
     let (bob_pub, bob_priv) = dippe.generate_key_pair(&mut rng);

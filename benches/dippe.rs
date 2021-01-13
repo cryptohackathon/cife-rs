@@ -3,11 +3,11 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 use rabe_bn::*;
 
 fn dippe_setup(c: &mut Criterion) {
-    let mut group = c.benchmark_group("Dippe::new");
+    let mut group = c.benchmark_group("Dippe::randomized");
     for k in [2, 3].iter() {
         group.bench_with_input(BenchmarkId::from_parameter(k), k, |b, &k| {
             let mut rng = rand::thread_rng();
-            b.iter(move || black_box(Dippe::new(&mut rng, k)));
+            b.iter(move || black_box(Dippe::randomized(&mut rng, k)));
         });
     }
     group.finish();
@@ -16,7 +16,7 @@ fn dippe_setup(c: &mut Criterion) {
     for k in [2, 3].iter() {
         group.bench_with_input(BenchmarkId::from_parameter(k), k, |b, &k| {
             let mut rng = rand::thread_rng();
-            let dippe = Dippe::new(&mut rng, k);
+            let dippe = Dippe::randomized(&mut rng, k);
             b.iter(move || black_box(dippe.generate_key_pair(&mut rng)));
         });
     }
@@ -30,7 +30,7 @@ fn dippe_setup(c: &mut Criterion) {
                 k,
                 |b, &k| {
                     let mut rng = rand::thread_rng();
-                    let dippe = Dippe::new(&mut rng, k);
+                    let dippe = Dippe::randomized(&mut rng, k);
                     let msg = Gt::one();
                     let (public, _private) = dippe.generate_key_pair(&mut rng);
 
@@ -56,7 +56,7 @@ fn dippe_setup(c: &mut Criterion) {
                 &(*k, attributes),
                 |b, &(k, attributes)| {
                     let mut rng = rand::thread_rng();
-                    let dippe = Dippe::new(&mut rng, k);
+                    let dippe = Dippe::randomized(&mut rng, k);
                     let msg = Gt::one();
                     let (public_alice, _private_alice) = dippe.generate_key_pair(&mut rng);
                     let (public_bob, private_bob) = dippe.generate_key_pair(&mut rng);
