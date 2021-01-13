@@ -4,7 +4,7 @@ use rabe_bn::*;
 use rand::prelude::*;
 
 /// Dynamically sized Matrix of a generic value.
-#[derive(Eq, PartialEq, Clone)]
+#[derive(Eq, PartialEq, Clone, serde::Deserialize, serde::Serialize)]
 pub struct Matrix<T> {
     n: usize,
     m: usize,

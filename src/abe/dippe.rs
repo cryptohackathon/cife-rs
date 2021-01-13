@@ -10,6 +10,7 @@ use rand::prelude::*;
 use sha2::{Digest, Sha256};
 
 /// Dippe system parameters
+#[derive(serde::Deserialize, serde::Serialize)]
 pub struct Dippe {
     assumption_size: usize,
     g1_a: G1Matrix,
@@ -27,6 +28,7 @@ impl fmt::Debug for Dippe {
 /// Public key of a DIPPE authority.
 ///
 /// A key-pair is generated with [`Dippe::generate_key_pair`]
+#[derive(serde::Deserialize, serde::Serialize)]
 pub struct PublicKey {
     g2_sigma: G2,
     g1_w_a: G1Matrix,
@@ -44,6 +46,7 @@ impl fmt::Debug for PublicKey {
 /// Private key of a DIPPE authority.
 ///
 /// A key-pair is generated with [`Dippe::generate_key_pair`]
+#[derive(serde::Deserialize, serde::Serialize)]
 pub struct PrivateKey {
     sigma: Fr,
     alpha: FrVector,
@@ -62,7 +65,7 @@ impl fmt::Debug for PrivateKey {
 ///
 /// A `PolicyVector` can be created manually, or through the methods provided by [`Dippe`], one of:
 /// - [`Dippe::create_conjunction_policy_vector`] to require conjunction of attributes,
-#[derive(Clone)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct PolicyVector(pub FrVector);
 
 impl PolicyVector {
@@ -76,7 +79,7 @@ impl PolicyVector {
 ///
 /// An `AttributeVector` can be created manually, or through the method provided by [`Dippe`]:
 /// - [`Dippe::create_attribute_vector`] to require conjunction of attributes,
-#[derive(Clone)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct AttributeVector(pub FrVector);
 
 impl AttributeVector {
@@ -95,11 +98,11 @@ impl fmt::Display for AttributeVector {
     }
 }
 
-/// A slice of a decryption key, issued by an authority.
+/// A partial decryption key, issued by an authority, for one single attribute.
 ///
-/// Internally, this consists of a key slice group element and the index of the attribute this
+/// Internally, this consists of a group vector and the index of the attribute this
 /// slice corresponds to.
-#[derive(Clone)]
+#[derive(Clone, serde::Deserialize, serde::Serialize)]
 pub struct UserPrivateKeyPart {
     inner: G2Vector,
     idx: usize,
@@ -161,7 +164,7 @@ impl UserPrivateKeySlice {
 }
 
 /// A slice of a decryption key, issued by an authority.
-#[derive(Clone)]
+#[derive(Clone, serde::Deserialize, serde::Serialize)]
 pub struct UserPrivateKey(G2Vector);
 
 impl core::iter::FromIterator<UserPrivateKeyPart> for Result<UserPrivateKeySlice, anyhow::Error> {
@@ -224,7 +227,7 @@ impl std::convert::TryFrom<UserPrivateKeySlice> for UserPrivateKey {
 /// A CipherText bound, used to encrypt against said policy.
 ///
 /// The `CipherText` is constructed from [`Dippe::encrypt`]
-#[derive(Clone)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct CipherText {
     c0: G1Vector,
     ci: G1Matrix,
