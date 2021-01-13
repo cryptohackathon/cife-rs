@@ -131,6 +131,8 @@ use rand::prelude::*;
 use sha2::{Digest, Sha256};
 
 /// Dippe system parameters
+///
+/// For usage and example code, see the [`dippe`][crate::abe::dippe] module-level documentation.
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Dippe {
     assumption_size: usize,
