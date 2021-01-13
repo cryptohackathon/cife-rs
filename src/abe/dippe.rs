@@ -106,7 +106,38 @@ pub struct UserPrivateKeyPart {
     attrs: usize,
 }
 
+impl UserPrivateKeyPart {
+    #[doc(hidden)]
+    // Method for doc test, k=2
+    pub fn new_ones(idx: usize, attrs: usize) -> Self {
+        UserPrivateKeyPart {
+            inner: G2Vector::ones(2, 1),
+            idx,
+            attrs,
+        }
+    }
+}
+
+/// A composition of [`UserPrivateKeyPart`]s.
 ///
+/// When the KeySlice is complete ([`UserPrivateKeySlice::is_complete`]), it can be converted via
+/// `try_from` to a [`UserPrivateKey`] and ultimately be used in [`Dippe::decrypt`] decryption
+/// operations.
+///
+/// # Example
+///
+/// ```rust
+/// # use cife_rs::abe::dippe::*;
+/// use std::convert::TryFrom;
+/// let part1: UserPrivateKeyPart /* retrieve from authority */;
+/// let part2: UserPrivateKeyPart /* retrieve from (possibly different) authority */;
+/// # let part1 = UserPrivateKeyPart::new_ones(0, 2);
+/// # let part2 = UserPrivateKeyPart::new_ones(1, 2);
+/// let parts = vec![part1, part2];
+/// let collection: Result<UserPrivateKeySlice, _> = parts.into_iter().collect();
+/// let collection = collection.expect("distinct and compatible key parts");
+/// let private_key = UserPrivateKey::try_from(collection).expect("complete key");
+/// ```
 #[derive(Clone)]
 pub struct UserPrivateKeySlice {
     sum: G2Vector,
