@@ -1,7 +1,6 @@
 use std::convert::TryFrom;
 
 use cife_rs::abe::dippe::*;
-use rabe_bn::*;
 
 #[test]
 fn end_to_end_conjunction() {

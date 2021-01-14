@@ -46,11 +46,12 @@
 //!
 //! # Example with conjunctive attribute policy
 //!
+//! In this example...
+//!
 //! ```rust
 //! use std::convert::TryFrom;
 //!
 //! use cife_rs::abe::dippe::*;
-//! use rabe_bn::Gt;
 //!
 //! let mut rng = rand::thread_rng();
 //! let dippe = Dippe::new(b"my application name", 2);
@@ -129,6 +130,8 @@ use bitvec::prelude::*;
 use rabe_bn::*;
 use rand::prelude::*;
 use sha2::{Digest, Sha256};
+
+pub use rabe_bn::Gt;
 
 /// Dippe system parameters
 ///

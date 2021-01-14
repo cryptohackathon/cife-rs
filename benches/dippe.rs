@@ -1,6 +1,5 @@
 use cife_rs::abe::dippe::*;
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use rabe_bn::*;
 
 fn dippe_setup(c: &mut Criterion) {
     let mut group = c.benchmark_group("Dippe::randomized");
@@ -57,8 +56,6 @@ fn dippe_setup(c: &mut Criterion) {
                 |b, &(k, attributes)| {
                     let mut rng = rand::thread_rng();
                     let dippe = Dippe::randomized(&mut rng, k);
-                    let msg = Gt::one();
-                    let (public_alice, _private_alice) = dippe.generate_key_pair(&mut rng);
                     let (public_bob, private_bob) = dippe.generate_key_pair(&mut rng);
 
                     let pks: Vec<_> = (0..(attributes + 1)).map(|_| &public_bob).collect();
