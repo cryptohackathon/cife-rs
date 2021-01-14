@@ -502,7 +502,7 @@ impl Dippe {
 
     /// Returns the *k* as per the constructed assumptions.
     pub fn assumptions(&self) -> usize {
-        self.assumptions_size
+        self.assumption_size
     }
 
     /// Generate the key-pair for a DIPPE authority
