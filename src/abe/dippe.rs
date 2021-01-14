@@ -96,6 +96,7 @@
 //! // Encrypt yields a `CipherText` object, which implements serde's traits for easy transport.
 //! let ciphertext = dippe.encrypt(&mut rng, &encryption_policy, msg, &pks);
 //! let ciphertext_serialized = serde_json::to_string(&ciphertext).expect("serialized json");
+//! // Alternatively, ciphertext.into_bytes() provides a shorter, canonical representation.
 //!
 //! // Now, Carol will request her private key.
 //! // She needs to talk with every authority, and request a KeyPart for every attribute.
@@ -352,12 +353,77 @@ impl std::convert::TryFrom<UserPrivateKeySlice> for UserPrivateKey {
 
 /// A CipherText bound, used to encrypt against said policy.
 ///
-/// The `CipherText` is constructed from [`Dippe::encrypt`]
+/// The `CipherText` is constructed from [`Dippe::encrypt`].  It can be verbosely serialized and
+/// deserialized with [`serde`], or the methods [`CipherText::into_bytes`], and
+/// [`CipherText::from_bytes`] can be used to get a compact form.
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct CipherText {
     c0: G1Vector,
     ci: G1Matrix,
     c_prime: Gt,
+}
+
+impl CipherText {
+    /// Serializes the ciphertext into a vector of bytes.
+    ///
+    /// The size of the resulting vector consists of XXX bytes.
+    pub fn into_bytes(self) -> Vec<u8> {
+        let mut result = Vec::with_capacity(self.bytes_len());
+        for i in 0..self.c0.dims().0 {
+            result.extend(self.c0[i].into_bytes());
+        }
+
+        for i in 0..self.ci.dims().0 {
+            for j in 0..self.ci.dims().1 {
+                result.extend(self.ci[(i, j)].into_bytes());
+            }
+        }
+
+        result.extend(self.c_prime.into_bytes());
+
+        result
+    }
+
+    /// Deserializes the ciphertext from a slice of bytes.
+    pub fn from_bytes(assumption_size: usize, policy_vec_size: usize, bytes: &[u8]) -> Self {
+        // C0 = k+1 x 1
+        // Ci = |policy| x k+1
+        // C' = |Gt| = 384
+        assert_eq!(
+            bytes.len(),
+            64 * ((assumption_size + 1) + (policy_vec_size * (assumption_size + 1))) + 384
+        );
+        let mut c0 = G1Vector::zeroes(assumption_size + 1, 1);
+        for i in 0..(assumption_size + 1) {
+            let offset = 64 * i;
+            c0[i] = G1::from_bytes(&bytes[offset..][..64]).unwrap();
+        }
+
+        let bytes = &bytes[64 * (assumption_size + 1)..];
+        let mut ci = G1Matrix::zeroes(policy_vec_size, assumption_size + 1);
+        for i in 0..policy_vec_size {
+            for j in 0..(assumption_size + 1) {
+                let offset = 64 * (i * (assumption_size + 1) + j);
+                ci[(i, j)] = G1::from_bytes(&bytes[offset..][..64]).unwrap();
+            }
+        }
+
+        let bytes = &bytes[64 * (policy_vec_size * (assumption_size + 1))..];
+
+        let c_prime = Gt::from_bytes(bytes).unwrap();
+
+        CipherText { c0, ci, c_prime }
+    }
+
+    /// Computes the amount of bytes necessary to represent this `CipherText`.
+    pub fn bytes_len(&self) -> usize {
+        // C0 = k+1 x 1
+        // Ci = |policy| x k+1
+        // C' = |Gt| = 384
+        let c0 = self.c0.dims().0;
+        let ci = self.ci.dims().0 * self.ci.dims().1;
+        64 * (c0 + ci) + 384
+    }
 }
 
 impl Dippe {

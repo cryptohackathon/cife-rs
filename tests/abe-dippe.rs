@@ -42,6 +42,8 @@ fn end_to_end_conjunction() {
 
     let msg = Gt::one();
     let ciphertext = dippe.encrypt(&mut rng, &test_pol_vec, msg, &pks);
+    let ciphertext_bytes = ciphertext.clone().into_bytes();
+    let ciphertext_deserialized = CipherText::from_bytes(2, vec_len, &ciphertext_bytes);
 
     // Every test policy gets a test user
     for (i, &(policy, valid)) in test_policies.into_iter().enumerate() {
@@ -61,6 +63,20 @@ fn end_to_end_conjunction() {
         let upk = UserPrivateKey::try_from(upk.unwrap()).unwrap();
 
         let recovered = dippe.decrypt(&upk, ciphertext.clone(), &user_policy, gid.as_bytes());
+
+        if valid {
+            assert_eq!(Vec::<u8>::from(recovered), Vec::from(msg));
+        } else {
+            assert_ne!(Vec::<u8>::from(recovered), Vec::from(msg));
+        }
+
+        // Try deserialized
+        let recovered = dippe.decrypt(
+            &upk,
+            ciphertext_deserialized.clone(),
+            &user_policy,
+            gid.as_bytes(),
+        );
 
         if valid {
             assert_eq!(Vec::<u8>::from(recovered), Vec::from(msg));
