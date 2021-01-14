@@ -424,6 +424,17 @@ impl CipherText {
         let ci = self.ci.dims().0 * self.ci.dims().1;
         64 * (c0 + ci) + 384
     }
+
+    /// Computes the amount of bytes necessary to represent a `CipherText` with the given
+    /// parameters.
+    pub fn len_for(policy_len: usize, assumptions: usize) -> usize {
+        // C0 = k+1 x 1
+        // Ci = |policy| x k+1
+        // C' = |Gt| = 384
+        let c0 = assumptions + 1;
+        let ci = policy_len * (assumptions + 1);
+        64 * (c0 + ci) + 384
+    }
 }
 
 impl Dippe {

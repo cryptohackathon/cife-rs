@@ -45,6 +45,9 @@ fn end_to_end_conjunction() {
     let ciphertext_bytes = ciphertext.clone().into_bytes();
     let ciphertext_deserialized = CipherText::from_bytes(2, vec_len, &ciphertext_bytes);
 
+    assert_eq!(CipherText::len_for(vec_len, 2), ciphertext_bytes.len());
+    assert_eq!(ciphertext.bytes_len(), ciphertext_bytes.len());
+
     // Every test policy gets a test user
     for (i, &(policy, valid)) in test_policies.into_iter().enumerate() {
         let mut usks = Vec::with_capacity(vec_len);
