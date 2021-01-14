@@ -129,7 +129,7 @@
 //! assert_eq!(Vec::<u8>::from(recovered), Vec::from(msg));
 //! ```
 
-use std::fmt;
+use core::fmt;
 
 use crate::mat::*;
 
@@ -341,7 +341,7 @@ impl core::iter::FromIterator<UserPrivateKeyPart> for Result<UserPrivateKeySlice
     }
 }
 
-impl std::convert::TryFrom<UserPrivateKeySlice> for UserPrivateKey {
+impl core::convert::TryFrom<UserPrivateKeySlice> for UserPrivateKey {
     type Error = anyhow::Error;
 
     fn try_from(upks: UserPrivateKeySlice) -> Result<UserPrivateKey, Self::Error> {
