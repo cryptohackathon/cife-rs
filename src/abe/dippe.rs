@@ -1,25 +1,33 @@
-//! Decentralized inner-product predicate encryption.
+//! Decentralized inner-product predicate encryption (DIPPE).
 //!
 //! This PE scheme is an implementation of DIPPE, an IPPE based scheme by
 //! [Yan Michalevsky and Marc Joye, 2018](https://eprint.iacr.org/2018/753).
 //!
 //! This predicate encryption scheme allows a user to decrypt a ciphertext when their attribute
-//! vector *v* is orthogonal to the predicate vector *x*, i.e. their *inner product* equals zero.
+//! vector *v* is orthogonal to the attribute vector *x*, i.e. their *inner product* equals zero.
 //!
 //! The paper suggests several applications of this idea.
 //! Currently, only the conjunction policy is implemented, although the vectors can also be
 //! manually constructed.
+//! The conjunction policy is represented by a predicate, which is a conjunction of attributes.
 //! The conjunction policy allows Carol to decrypt a message when her [`UserPrivateKey`] consists
-//! of a superset of the [`CipherText`]'s [`AttributeVector`].
+//! of a superset of the [`CipherText`]'s predicate, which is represented by a [`AttributeVector`].
 //! For example, if Carol has the attributes `[0, 1, 3, 4]`, she can decrypt a cipher text that has
-//! been encrypted with `[0, 3, 4]`, but not one encrypted with `[0, 2, 4]`.
+//! been encrypted with the predicate `[0, 3, 4]`, but not one encrypted with `[0, 2, 4]`.
+//!
+//! # Entities in our examples
+//!
+//! In these examples, Alice and Bob are *authorities*, and Carol is an end-user.
+//! Anyone with the public keys of Alice and Bob, and knowledge of the attributes can encrypt.
+//! Only users with a [`UserPrivateKey`], which is a composition of partial keys by all the authorities,
+//! has the ability to decrypt.  We will give Carol such a key.
 //!
 //! # Usage
 //!
 //! In general, using the scheme consists of the following steps:
 //! 1. **Setup**: Generate either a randomized [`Dippe`] through [`Dippe::randomized`], or a
 //!    deterministic one based on a public common reference string through [`Dippe::new`].
-//!    This is the global system setup for your application.
+//!    This is the global system setup for your application, and consists of some global constants.
 //!
 //!    These methods also require to choose the security parameter *k* for the *k*-lin assumption.
 //!
@@ -45,8 +53,6 @@
 //!    element.
 //!
 //! # Example with conjunctive attribute policy
-//!
-//! In this example...
 //!
 //! ```rust
 //! use std::convert::TryFrom;
