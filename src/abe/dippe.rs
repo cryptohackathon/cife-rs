@@ -500,6 +500,11 @@ impl Dippe {
         }
     }
 
+    /// Returns the *k* as per the constructed assumptions.
+    pub fn assumptions(&self) -> usize {
+        self.assumptions_size
+    }
+
     /// Generate the key-pair for a DIPPE authority
     pub fn generate_key_pair<R: CryptoRng + RngCore>(
         &self,
