@@ -70,6 +70,16 @@ constructors!(Fr);
 constructors!(G1);
 constructors!(G2);
 
+impl Matrix<Gt> {
+    pub fn ones(n: usize, m: usize) -> Self {
+        Self {
+            n,
+            m,
+            inner: vec![Gt::one(); n * m],
+        }
+    }
+}
+
 impl<T> IntoIterator for Matrix<T> {
     type Item = T;
     type IntoIter = <Vec<T> as IntoIterator>::IntoIter;

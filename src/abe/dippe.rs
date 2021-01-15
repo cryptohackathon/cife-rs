@@ -168,6 +168,76 @@ pub struct PublicKey {
     gt_alpha_a: GtVector,
 }
 
+impl PublicKey {
+    /// Represent this UPK as bytes
+    pub fn into_bytes(self) -> Vec<u8> {
+        let mut result = Vec::new();
+
+        result.extend(self.g2_sigma.into_bytes());
+
+        for i in 0..self.g1_w_a.dims().0 {
+            for j in 0..self.g1_w_a.dims().1 {
+                result.extend(self.g1_w_a[(i, j)].into_bytes())
+            }
+        }
+
+        for i in 0..self.gt_alpha_a.dims().0 {
+            result.extend(self.gt_alpha_a[i].into_bytes())
+        }
+
+        result
+    }
+
+    // let privkey = PrivateKey {
+    //     sigma: rand.gen(),
+    //     alpha: FrVector::from_random(rand, self.assumption_size + 1, 1),
+    //     w: FrVector::from_random(rand, self.assumption_size + 1, self.assumption_size + 1),
+    // };
+    //
+    // let wt = privkey.w.transposed();
+    //
+    // let gt_a = self.g1_a.pair_with_g2();
+    // let gt_a_t = gt_a.transposed();
+    //
+    // let pubkey = PublicKey {
+    //     g2_sigma: G2::one() * privkey.sigma.clone(),
+    //     g1_w_a: wt * self.g1_a.clone(),
+    //     gt_alpha_a: gt_a_t * privkey.alpha.clone(),
+    // };
+    //
+    // let mut a = FrMatrix::zeroes(assumption_size + 1, assumption_size);
+    //
+    // let mut ut = FrMatrix::zeroes(assumption_size + 1, assumption_size + 1);
+
+    pub fn from_bytes(assumption_size: usize, bytes: &[u8]) -> Self {
+        let g2_sigma = G2::from_bytes(&bytes[..128]).unwrap();
+        let bytes = &bytes[128..];
+
+        // dims: k+1 x k
+        let mut g1_w_a = G1Matrix::zeroes(assumption_size + 1, assumption_size);
+        for i in 0..g1_w_a.dims().0 {
+            for j in 0..g1_w_a.dims().1 {
+                g1_w_a[(i, j)] =
+                    G1::from_bytes(&bytes[(64 * ((i * g1_w_a.dims().1) + j))..][..64]).unwrap();
+            }
+        }
+
+        let bytes = &bytes[(64 * (assumption_size + 1) * assumption_size)..];
+
+        // dims:  k * 1
+        let mut gt_alpha_a = GtVector::ones(assumption_size, 1);
+        for i in 0..gt_alpha_a.dims().0 {
+            gt_alpha_a[i] = Gt::from_bytes(&bytes[(i * 384)..][..384]).unwrap();
+        }
+
+        Self {
+            g2_sigma,
+            g1_w_a,
+            gt_alpha_a,
+        }
+    }
+}
+
 impl fmt::Debug for PublicKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("PublicKey")
@@ -299,6 +369,25 @@ impl UserPrivateKeySlice {
 /// A slice of a decryption key, issued by an authority.
 #[derive(Clone, serde::Deserialize, serde::Serialize)]
 pub struct UserPrivateKey(G2Vector);
+
+impl UserPrivateKey {
+    /// Represent this UPK as bytes
+    pub fn into_bytes(self) -> Vec<u8> {
+        let mut result = Vec::new();
+        for i in 0..self.0.dims().0 {
+            result.extend(self.0[i].into_bytes())
+        }
+        result
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        let mut v = G2Vector::zeroes(bytes.len() / 128, 1);
+        for i in 0..(bytes.len() / 128) {
+            v[i] = G2::from_bytes(&bytes[(i * 128)..][..128]).unwrap();
+        }
+        Self(v)
+    }
+}
 
 impl core::iter::FromIterator<UserPrivateKeyPart> for Result<UserPrivateKeySlice, anyhow::Error> {
     fn from_iter<T>(parts: T) -> Result<UserPrivateKeySlice, anyhow::Error>
@@ -911,4 +1000,24 @@ mod tests {
             }
         }
     }
+
+    // #[test]
+    // fn ciphertext_bytes() {
+    //     let k = 2;
+    //     let pol = 5;
+    //
+    //     let mut rng = thread_rng();
+    //     for _ in 0..1000 {
+    //         let ct = CipherText {
+    //             c0: G1Vector::from_random(&mut rng, k + 1, 1),
+    //             ci: G1Matrix::from_random(&mut rng, pol, k + 1),
+    //             c_prime: rng.gen(),
+    //         };
+    //         let serialized = serde_json::to_string(&ct).unwrap();
+    //         let bytes = ct.clone().into_bytes();
+    //         let unbit = CipherText::from_bytes(k, pol, &bytes);
+    //
+    //         assert_eq!(serialized, serde_json::to_string(&unbit).unwrap());
+    //     }
+    // }
 }

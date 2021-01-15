@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 
 use cife_rs::abe::dippe::*;
+use rand::Rng;
 
 #[test]
 fn end_to_end_conjunction() {
@@ -40,10 +41,15 @@ fn end_to_end_conjunction() {
     assert_eq!(pks.len(), vec_len);
     assert_eq!(test_pol_vec.len(), vec_len);
 
-    let msg = Gt::one();
+    let msg: Gt = rng.gen();
     let ciphertext = dippe.encrypt(&mut rng, &test_pol_vec, msg, &pks);
     let ciphertext_bytes = ciphertext.clone().into_bytes();
     let ciphertext_deserialized = CipherText::from_bytes(2, vec_len, &ciphertext_bytes);
+
+    assert_eq!(
+        ciphertext_deserialized.clone().into_bytes(),
+        ciphertext.clone().into_bytes()
+    );
 
     assert_eq!(CipherText::len_for(vec_len, 2), ciphertext_bytes.len());
     assert_eq!(ciphertext.bytes_len(), ciphertext_bytes.len());
